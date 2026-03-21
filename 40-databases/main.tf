@@ -1,5 +1,5 @@
 resource "aws_instance" "mongodb" {
-  ami           = data.aws_ami.joindevops
+  ami           = data.aws_ami.joindevops.id
   instance_type = "t3.micro"
   subnet_id = local.database_subnet_id
   vpc_security_group_ids = [local.mongodb_sg_id]
