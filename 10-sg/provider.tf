@@ -5,6 +5,15 @@ terraform {
       version = "6.33.0"
     }
   }
+
+
+  backend "s3" {
+    bucket  = "remote-state-aws-chittis-dev" # Replace with your unique bucket name
+    key     = "roboshop-dev-sg"
+    region  = "us-east-1"
+    encrypt = true
+    use_lockfile   = true
+  }
 }
 
 provider "aws" {
