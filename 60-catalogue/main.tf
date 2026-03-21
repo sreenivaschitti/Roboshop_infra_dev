@@ -1,0 +1,123 @@
+resource "aws_instance" "catalogue" {
+  ami           = data.aws_ami.joindevops.id
+  instance_type = "t3.micro"
+  subnet_id = local.private_subnet_id
+  vpc_security_group_ids = [local.catalogue_sg_id]
+  #iam_instance_profile = aws_iam_instance_profile.bastion.name
+
+  tags = merge(
+    local.common_tags,{
+
+      Name = "${var.project}-${var.environment}-catalogue"
+    }
+
+
+  )
+}
+
+resource "terraform_data" "catalogue" {
+  triggers_replace = [
+    aws_instance.catalogue.id
+  ]
+
+  connection {
+    type     = "ssh"
+    user     = "ec2-user"
+    password = "DevOps321"
+    host     = aws_instance.catalogue.private_ip
+  }
+
+  provisioner "file" {
+    source      = "bootstrap.sh" # Local file path
+    destination = "/tmp/bootstrap.sh"    # Destination path on the remote machine
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+        "chmod +x /tmp/bootstrap.sh",
+        "sudo sh /tmp/bootstrap.sh catalogue ${var.environment}"
+    ]
+  }
+}
+
+resource "aws_ec2_instance_state" "catalogue" {
+  instance_id = aws_instance.catalogue.id
+  state       = "stopped"
+  depends_on = [terraform_data.catalogue]
+}
+
+resource "aws_ami_from_instance" "catalogue" {
+  # roboshop-dev-catalogue-v3-i-h468sghy
+  name               = "${var.project}-${var.environment}-catalogue"
+  source_instance_id = aws_instance.catalogue.id
+  depends_on = [aws_ec2_instance_state.catalogue]
+  tags = merge(
+    {
+        Name = "${var.project}-${var.environment}-catalogue"
+    },
+    local.common_tags
+  )
+}
+
+resource "aws_lb_target_group" "catalogue" {
+  name     = "${var.project}-${var.environment}-catalogue"
+  port     = 8080
+  protocol = "HTTP"
+  vpc_id   = local.vpc_id
+  deregistration_delay = 60
+
+  health_check {
+    healthy_threshold = 2
+    interval = 10
+    matcher = "200-299"
+    path = "/health"
+    port = 8080
+    protocol = "HTTP"
+    timeout = 2
+    unhealthy_threshold = 3
+  }
+}
+
+
+resource "aws_launch_template" "catalogue" {
+  name = "${var.project}-${var.environment}-catalogue"
+  image_id = aws_ami_from_instance.catalogue.id
+
+  # once autoscaling sees less traffic, it will terminate the instance
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type = "t3.micro"
+  vpc_security_group_ids = [local.catalogue_sg_id]
+
+  # each time we apply terraform this version will be updated as default
+  update_default_version = true
+  
+  # tags for instances created by launch template through autoscaling
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+  }
+  # tags for volumes created by instances
+  tag_specifications {
+    resource_type = "volume"
+
+    tags = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+  }
+  # tags for launch template
+  tags = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+}
