@@ -58,7 +58,7 @@ resource "aws_instance" "redis" {
   )
 }
 
-resource "terraform_data" "redis" {
+resource "terraform_data" "bootstrap_redis" {
   triggers_replace = [
     aws_instance.redis.id
   ]
