@@ -12,5 +12,5 @@ git clone https://github.com/sreenivaschitti/ansible-roboshop-roles-tf1.git
 
 
 cd ansible-roboshop-roles-tf1
-#git pull
+git pull
 ansible-playbook -e component=$component -e env=$environment roboshop.yaml

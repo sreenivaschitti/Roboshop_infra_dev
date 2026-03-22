@@ -1,4 +1,4 @@
-for i in 00-vpc/ 10-sg/ 20-sg-rules/ 30-Bastion/ 40-databases/ 50-backend-alb/; do cd $i; terraform apply -auto-approve; cd ..;done 
+for i in 00-vpc/ 10-sg/ 20-sg-rules/ 30-Bastion/ ; do cd $i; terraform apply -auto-approve; cd ..;done 
 
 
 for i in 30-Bastion/ 20-sg-rules/ 10-sg/ 00-vpc/  ; do cd $i; terraform apply -auto-approve; cd ..;done
